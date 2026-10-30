@@ -2,17 +2,16 @@ import streamlit as st
 import time
 import json
 import os
-import requests # Används för att prata med den snabba AI-servern
+import requests
 
 # 1. DESIGN OCH CONFIG
 st.set_page_config(page_title="Min Permanenta Spel-AI", page_icon="🎮", layout="centered")
 st.title("🎮 Min Permanenta Spel-AI & Chatt")
 st.write("Uppgraderad med avancerad spelprogrammering och blixtsnabb chatt-respons!")
 
-# API-länk till en supersnabb, gratis server för Qwen-modellen
+# Vi byter till Hugging Face rekommenderade öppna API-gränssnitt
 API_URL = "https://huggingface.co"
 
-# Dolda träningsmål inom spelprogrammering
 spel_läroplan = [
     "Skapa ett rörelsesystem för en spelare i 2D (upp, ner, vänster, höger) med kollisionshantering.",
     "Skriv en AI-logik för en fiende som jagar spelarens koordinater (X, Y) på en karta.",
@@ -40,7 +39,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# CHATTEN (Blixtsnabb via extern server)
+# CHATTEN (Blixtsnabb och säkrad)
 if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..."):
     
     with st.chat_message("user"):
@@ -50,29 +49,32 @@ if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..
     with st.chat_message("assistant"):
         with st.spinner("AI:n svarar..."):
             try:
-                # Vi skickar frågan till den externa snabba servern istället för att räkna på CPU:n
-                headers = {"Authorization": "Bearer hf_placeholder"} # Använder offentlig gratis-pool
-                payload = {"inputs": prompt, "parameters": {"max_new_tokens": 400, "temperature": 0.7}}
+                # Vi bygger om anropet så det matchar den öppna gratis-porten exakt
+                payload = {
+                    "inputs": f"<|im_start|>system\nDu är en smart AI-assistent som svarar på svenska.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
+                    "parameters": {"max_new_tokens": 300, "temperature": 0.7, "return_full_text": False}
+                }
                 
                 response = requests.post(API_URL, json=payload)
                 resultat = response.json()
                 
-                # Hämta ut svaret säkert
-                if isinstance(resultat, list) and "generated_text" in resultat[0]:
+                # Stormsäker utläsning av texten från API:n
+                if isinstance(resultat, list) and len(resultat) > 0 and "generated_text" in resultat[0]:
                     rent_svar = resultat[0]["generated_text"].strip()
                 elif isinstance(resultat, dict) and "generated_text" in resultat:
                     rent_svar = resultat["generated_text"].strip()
+                elif "error" in resultat:
+                    rent_svar = f"Molnservern startar upp (Modellen laddas). Prova att skicka meddelandet igen om 20 sekunder! (Info: {resultat['error']})"
                 else:
-                    rent_svar = "Hej! Jag är redo att hjälpa dig med spelprogrammering. Vad vill du bygga idag?"
+                    rent_svar = "Jag tog emot ditt meddelande! Vad vill du programmera för spelmekanik idag?"
                     
             except Exception as e:
-                rent_svar = f"Hoppsan! Servern är upptagen just nu, men jag försöker igen. (Detaljer: {e})"
+                rent_svar = f"Kunde inte nå servern just nu. Vi provar igen! (Fel: {e})"
                 
         st.markdown(rent_svar)
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
 
-# AUTONOM TRÄNING I BAKGRUNDEN (Möter spelmålen!)
-# Eftersom chatten nu är flyttad till API:n, kan vi använda Streamlits CPU exklusivt till att tugga träningsdata
+# Bakgrundsindikator
 if len(st.session_state.messages) == 0:
     st.write("---")
-    st.info("🤖 AI-Fabriken är vilande. Skriv i chatten ovan eller låt den ligga för att generera data.")
+    st.info("🤖 AI-Fabriken är redo och lyssnar dygnet runt. Skriv i chatten ovan för att starta!")
