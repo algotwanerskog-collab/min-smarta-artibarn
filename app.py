@@ -2,9 +2,10 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import time
+import urllib.parse # Används för att säkert omvandla texten till en webblänk
 
 # 1. DESIGN OCH CONFIG
-st.set_page_config(page_title="Aleos AI Spel-Fabrik 4.0", page_icon="🔮", layout="centered")
+st.set_page_config(page_title="Aleos AI Spel-Fabrik 4.1", page_icon="🔮", layout="centered")
 st.title("🔮 Aleos Universella AI-Spelfabrik")
 st.write("Skriv precis vilken spelidé som helst nedan, så kodar AI-hjärnan hela spelskärmen live från grunden!")
 
@@ -52,7 +53,7 @@ with knapp_spår:
     st.write(" ") # Justering
     generera_klick = st.button("🤖 Generera Spel", use_container_width=True)
 
-# BEARBETNING: Skickar din unika idé till den öppna AI-hjärnan
+# BEARBETNING: Skickar din unika idé via ett säkert GET-anrop
 if generera_klick and input_text:
     final_prompt = input_text
     if bild_instruktion:
@@ -63,34 +64,34 @@ if generera_klick and input_text:
     with st.spinner("AI-hjärnan kodar ditt unika spel... Detta kan ta upp till 30 sekunder..."):
         try:
             system_prompt = (
-                "You are an expert game developer. Write a complete, working 2D game in a single HTML block "
-                "using <canvas> and <script>. Use beautiful colors, custom pixel-like graphics, and full keyboard/touch controls. "
-                "Implement ALL specific rules, mechanics, scoring systems, and backgrounds requested by the user. "
-                "Return ONLY the raw HTML/JS code. Do not include markdown formatting like html."
+                "You are an expert 2D game developer. Write a complete, working, single-file HTML game "
+                "using HTML5 <canvas> and <script> JavaScript. Use beautiful neon colors, custom pixel-like graphics, "
+                "and full keyboard controls (W,A,S,D / Arrows). Implement ALL specific rules, mechanics, scoring systems, "
+                "and winning/losing conditions requested by the user. "
+                "Return ONLY the raw HTML/JS code. Do NOT wrap your answer in markdown codeblocks like html."
             )
             
-            # Anrop till den helt öppna och gratis Pollinations-tunnneln
-            payload = {
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": final_prompt}
-                ],
-                "model": "openai"
-            }
+            # SÄKRARE GET-METOD: Vi bakar in systeminstruktionerna och din idé direkt i webbadressen
+            kodad_system = urllib.parse.quote(system_prompt)
+            kodad_prompt = urllib.parse.quote(final_prompt)
             
-            response = requests.post("https://pollinations.ai", json=payload, timeout=45)
+            # Vi bygger den perfekta API-länken som tar emot text direkt
+            länk = f"https://pollinations.ai{kodad_system}/prompt/{kodad_prompt}"
+            
+            # Vi gör ett GET-anrop istället för POST för att slippa 405-fel!
+            response = requests.get(länk, timeout=45)
             
             if response.status_code == 200:
                 genererad_text = response.text.strip()
                 
-                # Städa bort eventuella markdown-taggar som AI:n lade till ändå
+                # Städa bort eventuella råa markdown-block om AI:n lade till dem ändå
                 if "html" in genererad_text:
-                    genererad_text = genererad_text.split("html")[-1].split("")[0].strip()
+                    genererad_text = genererad_text.split("html")[-1].split("").strip()
                 elif "" in genererad_text:
-                    genererad_text = genererad_text.split("")[-1].split("```")[0].strip()
+                    genererad_text = genererad_text.split("")[-1].split("```").strip()
                 
                 st.session_state.genererad_kod = genererad_text
-                svar = "🔮 *Spel framgångsrikt skapat utifrån din idé!* AI:n har skrivit hela källkoden live. Testa spelskärmen högst upp!"
+                svar = "🔮 *Spel framgångsrikt skapat!* AI-hjärnan har byggt hela källkoden live utifrån dina instruktioner. Testa spelskärmen högst upp!"
             else:
                 svar = f"Kunde inte nå AI-servern just nu (Kod: {response.status_code}). Försök igen om ett ögonblick!"
         except Exception as e:
