@@ -2,10 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import time
-import urllib.parse # Används för att säkert omvandla texten till en webblänk
 
 # 1. DESIGN OCH CONFIG
-st.set_page_config(page_title="Aleos AI Spel-Fabrik 4.1", page_icon="🔮", layout="centered")
+st.set_page_config(page_title="Aleos AI Spel-Fabrik 4.2", page_icon="🔮", layout="centered")
 st.title("🔮 Aleos Universella AI-Spelfabrik")
 st.write("Skriv precis vilken spelidé som helst nedan, så kodar AI-hjärnan hela spelskärmen live från grunden!")
 
@@ -53,7 +52,7 @@ with knapp_spår:
     st.write(" ") # Justering
     generera_klick = st.button("🤖 Generera Spel", use_container_width=True)
 
-# BEARBETNING: Skickar din unika idé via ett säkert GET-anrop
+# BEARBETNING: Skickar din unika idé via en säker, kompakt POST-metod till rätt endpoint
 if generera_klick and input_text:
     final_prompt = input_text
     if bild_instruktion:
@@ -61,7 +60,7 @@ if generera_klick and input_text:
         
     st.session_state.messages.append({"role": "user", "content": final_prompt})
     
-    with st.spinner("AI-hjärnan kodar ditt unika spel... Detta kan ta upp till 30 sekunder..."):
+    with st.spinner("AI-hjärnan kodar ditt unika spel... Detta kan ta en liten stund..."):
         try:
             system_prompt = (
                 "You are an expert 2D game developer. Write a complete, working, single-file HTML game "
@@ -71,15 +70,18 @@ if generera_klick and input_text:
                 "Return ONLY the raw HTML/JS code. Do NOT wrap your answer in markdown codeblocks like html."
             )
             
-            # SÄKRARE GET-METOD: Vi bakar in systeminstruktionerna och din idé direkt i webbadressen
-            kodad_system = urllib.parse.quote(system_prompt)
-            kodad_prompt = urllib.parse.quote(final_prompt)
+            # Vi paketerar data på det officiella sättet som Pollinations kräver utan att skriva texten i URL-länken
+            payload = {
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": final_prompt}
+                ],
+                "model": "openai",
+                "jsonMode": False
+            }
             
-            # Vi bygger den perfekta API-länken som tar emot text direkt
-            länk = f"https://pollinations.ai{kodad_system}/prompt/{kodad_prompt}"
-            
-            # Vi gör ett GET-anrop istället för POST för att slippa 405-fel!
-            response = requests.get(länk, timeout=45)
+            # Det korrekta anropet till Pollinations text-endpoint som tillåter POST
+            response = requests.post("https://pollinations.ai", json=payload, timeout=45)
             
             if response.status_code == 200:
                 genererad_text = response.text.strip()
@@ -91,7 +93,7 @@ if generera_klick and input_text:
                     genererad_text = genererad_text.split("")[-1].split("```").strip()
                 
                 st.session_state.genererad_kod = genererad_text
-                svar = "🔮 *Spel framgångsrikt skapat!* AI-hjärnan har byggt hela källkoden live utifrån dina instruktioner. Testa spelskärmen högst upp!"
+                svar = "🔮 *Spel framgångsrikt skapat!* AI-hjärnan har byggt hela källkoden live utifrån dina instruktioner. Spela det högst upp på skärmen!"
             else:
                 svar = f"Kunde inte nå AI-servern just nu (Kod: {response.status_code}). Försök igen om ett ögonblick!"
         except Exception as e:
