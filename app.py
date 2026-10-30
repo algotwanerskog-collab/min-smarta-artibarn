@@ -14,7 +14,6 @@ st.write("Den här appen körs helt gratis dygnet runt i molnet och dör aldrig!
 @st.cache_resource
 def ladda_ai_modell():
     model_name = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-    # Använd snabb och minnessnål laddning för moln-CPU
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True)
     return tokenizer, model
@@ -43,32 +42,24 @@ for message in st.session_state.messages:
 # 6. INPUT-RUTA FÖR ATT CHATTA (Precis som på ChatGPT)
 if prompt := st.chat_input("Skriv något till din AI..."):
     
-    # Kolla om användaren skriver rensa direkt i textrutan
     if prompt.strip().lower() in ["rensa", "radera", "clear"]:
         st.session_state.messages = []
         st.success("Chattminnet har raderats helt!")
         time.sleep(1)
         st.rerun()
 
-    # Visa det du precis skrev i en bubbla
     with st.chat_message("user"):
         st.markdown(prompt)
     
-    # Spara ditt meddelande i minnesbanken
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Generera AI:ns svar baserat på hela minnet
     with st.chat_message("assistant"):
         system_instruktion = "Du är en smart AI-assistent. Svara på svenska. Kom ihåg tidigare meddelanden."
-        
-        # Bygg ihop hela historiken till modellen
         full_context = [{"role": "system", "content": system_instruktion}] + st.session_state.messages
         
-        # Gör om till AI-format
         text = tokenizer.apply_chat_template(full_context, tokenize=False, add_generation_prompt=True)
         inputs = tokenizer([text], return_tensors="pt")
         
-        # Tänk-snurra medan molnservern räknar ut svaret
         with st.spinner("AI:n tänker..."):
             ids = model.generate(
                 **inputs, 
@@ -76,11 +67,9 @@ if prompt := st.chat_input("Skriv något till din AI..."):
                 do_sample=True, 
                 temperature=0.7
             )
-            fullt_svar = tokenizer.decode(ids, skip_special_tokens=True)
+            # FIXEN: Vi lägger till [0] för att plocka ut texten ur listan och slippa list-felet!
+            fullt_svar = tokenizer.decode(ids[0], skip_special_tokens=True)
             rent_svar = fullt_svar.split("assistant\n")[-1].strip()
             
-        # Visa svaret på skärmen
         st.markdown(rent_svar)
-        
-        # Spara AI:ns egna svar i minnet så den kommer ihåg vad den själv sagt
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
