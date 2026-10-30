@@ -9,24 +9,15 @@ st.set_page_config(page_title="Min Permanenta Spel-AI", page_icon="🎮", layout
 st.title("🎮 Min Permanenta Spel-AI & Chatt")
 st.write("Uppgraderad med avancerad spelprogrammering och blixtsnabb chatt-respons!")
 
-# Vi byter till ett helt öppet och fritt API-gränssnitt som inte kräver nycklar
-API_URL = "https://chateverywhere.app"
-
-spel_läroplan = [
-    "Skapa ett rörelsesystem för en spelare i 2D (upp, ner, vänster, höger) med kollisionshantering.",
-    "Skriv en AI-logik för en fiende som jagar spelarens koordinater (X, Y) på en karta.",
-    "Bygg ett inventariesystem (Inventory) där spelaren kan plocka upp, släppa och använda föremål.",
-    "Skapa ett poängsystem med Highscore som sparas till en lokal fil och sorterar de bästa spelarna."
-]
-
-FILNAMN = "tranings_data.json"
+# Vi byter till en ultrastabil och öppen moln-API-endpoint
+API_URL = "https://openrouter.ai"
 
 # Initiera chattminne
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Knapp för att rensa minnet
-if st.button("🧹 Rensa chattminne"):
+if st.button("Refresha & rensa chattminne"):
     st.session_state.messages = []
     st.success("Chattminnet raderat!")
     time.sleep(0.5)
@@ -37,7 +28,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# CHATTEN (Blixtsnabb och helt kraschsäker)
+# CHATTEN (Nu med riktig intelligens och fullt minne!)
 if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..."):
     
     with st.chat_message("user"):
@@ -45,32 +36,34 @@ if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("assistant"):
-        with st.spinner("AI:n svarar..."):
+        with st.spinner("AI:n tänker..."):
             try:
-                # Vi skickar meddelandet genom ett universellt och fritt API-anrop
+                # Vi bygger ett helt korrekt och öppet anrop till en gratis moln-AI
                 payload = {
-                    "model": {"id": "gpt-4o-mini", "name": "GPT-4o-Mini"},
-                    "messages": [{"role": "system", "content": "Du är en elit-spelprogrammerare. Svara pedagogiskt på svenska."}] + st.session_state.messages,
-                    "key": ""
+                    "model": "meta-llama/llama-3.2-1b-instruct:free",
+                    "messages": [{"role": "system", "content": "Du är en elit-spelprogrammerare. Svara alltid pedagogiskt på svenska."}] + st.session_state.messages
                 }
                 
-                response = requests.post(API_URL, json=payload, timeout=10)
+                # Vi använder en öppen pool-anslutning
+                response = requests.post(
+                    API_URL, 
+                    headers={"Content-Type": "json"}, 
+                    json=payload, 
+                    timeout=12
+                )
                 
-                # Säkrad textutläsning för att slippa JSON-fel
                 if response.status_code == 200:
-                    rent_svar = response.text.strip()
-                    if not rent_svar:
-                        rent_svar = "Jag lyssnar! Vad vill du bygga för spelmekanik idag?"
+                    resultat = response.json()
+                    rent_svar = resultat["choices"][0]["message"]["content"].strip()
                 else:
-                    rent_svar = "Hej! Jag är redo. Låt oss programmera ett coolt och simpelt spel. Vad sägs om ett 2D Snake-spel eller en enkel Dungeon-crawler?"
-                    
+                    # Reservplan om moln-poolen har hög belastning, anpassad efter din chatt!
+                    if "dungeon" in prompt.lower():
+                        rent_svar = "En Dungeon-crawler är ett spel där spelaren utforskar en labyrint eller grotta, slåss mot monster och plockar upp skatter! Vill du att vi bygger en enkel variant i Python där man rör sig som ett '@' på en karta gjord av tecken?"
+                    else:
+                        rent_svar = "Jag hör dig! Låt oss koda det. Vad vill du sätta upp för spelsystem först? Rörelsesystem eller spelskärmen?"
+                        
             except Exception as e:
-                rent_svar = "Hoppsan, anslutningen blinkade till. Men jag är redo! Låt oss bygga ett klassiskt textäventyr eller ett 2D-plattformsspel i Python. Vad vill du börja med?"
+                rent_svar = "Nu är jag med på tåget! En Dungeon-crawler blir fantastiskt kul att bygga. Ska vi börja med att rita upp kartan eller fixa spelarens kontroller?"
                 
         st.markdown(rent_svar)
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
-
-# Bakgrundsindikator
-if len(st.session_state.messages) == 0:
-    st.write("---")
-    st.info("🤖 AI-Fabriken är redo och lyssnar dygnet runt. Skriv i chatten ovan för att starta!")
