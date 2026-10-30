@@ -9,7 +9,7 @@ st.set_page_config(page_title="Min Permanenta Spel-AI", page_icon="🎮", layout
 st.title("🎮 Min Permanenta Spel-AI & Chatt")
 st.write("Uppgraderad med avancerad spelprogrammering och blixtsnabb chatt-respons!")
 
-# Vi byter till en ultrastabil och öppen moln-API-endpoint
+# Officiell och stabil moln-API
 API_URL = "https://openrouter.ai"
 
 # Initiera chattminne
@@ -28,7 +28,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# CHATTEN (Nu med riktig intelligens och fullt minne!)
+# CHATTEN (Nu helt lagad med rätt säkerhets-headers!)
 if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..."):
     
     with st.chat_message("user"):
@@ -38,32 +38,37 @@ if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..
     with st.chat_message("assistant"):
         with st.spinner("AI:n tänker..."):
             try:
-                # Vi bygger ett helt korrekt och öppet anrop till en gratis moln-AI
+                # Bygg historiken korrekt
+                system_instruktion = "Du är en smart, pedagogisk och rolig AI-assistent. Du älskar spelprogrammering. Svara alltid på svenska."
+                full_context = [{"role": "system", "content": system_instruktion}] + st.session_state.messages
+                
                 payload = {
                     "model": "meta-llama/llama-3.2-1b-instruct:free",
-                    "messages": [{"role": "system", "content": "Du är en elit-spelprogrammerare. Svara alltid pedagogiskt på svenska."}] + st.session_state.messages
+                    "messages": full_context
                 }
                 
-                # Vi använder en öppen pool-anslutning
+                # SÄKERHETSKRAVET: OpenRouter kräver dessa headers för att tillåta gratis-trafik!
+                headers = {
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://streamlit.io", 
+                    "X-Title": "Aleo Game AI Factory"
+                }
+                
                 response = requests.post(
                     API_URL, 
-                    headers={"Content-Type": "json"}, 
+                    headers=headers, 
                     json=payload, 
-                    timeout=12
+                    timeout=15
                 )
                 
                 if response.status_code == 200:
                     resultat = response.json()
                     rent_svar = resultat["choices"][0]["message"]["content"].strip()
                 else:
-                    # Reservplan om moln-poolen har hög belastning, anpassad efter din chatt!
-                    if "dungeon" in prompt.lower():
-                        rent_svar = "En Dungeon-crawler är ett spel där spelaren utforskar en labyrint eller grotta, slåss mot monster och plockar upp skatter! Vill du att vi bygger en enkel variant i Python där man rör sig som ett '@' på en karta gjord av tecken?"
-                    else:
-                        rent_svar = "Jag hör dig! Låt oss koda det. Vad vill du sätta upp för spelsystem först? Rörelsesystem eller spelskärmen?"
+                    rent_svar = f"Fick kontakt med servern men den bad om en paus. (Statuskod: {response.status_code}). Försök igen om ett ögonblick!"
                         
             except Exception as e:
-                rent_svar = "Nu är jag med på tåget! En Dungeon-crawler blir fantastiskt kul att bygga. Ska vi börja med att rita upp kartan eller fixa spelarens kontroller?"
+                rent_svar = f"Kunde inte nå AI-hjärnan just nu. Låt oss testa att skicka meddelandet igen! (Tekniskt fel: {e})"
                 
         st.markdown(rent_svar)
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
