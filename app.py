@@ -168,7 +168,7 @@ bild_instruktion = st.text_input("Fyll i din bild-scanning här (t.ex. pixelgraf
 for message in st.session_state.messages:
     with st.chat_message(message["role"]): st.markdown(message["content"])
 
-chatt_spår, knapp_spår = st.columns()
+chatt_spår, knapp_spår = st.columns(2)
 with chatt_spår:
     input_text = st.text_input("Skriv din spelidé eller prata med AI:n här:", key="user_input_field")
 with knapp_spår:
