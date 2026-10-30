@@ -5,33 +5,28 @@ import time
 # 1. DESIGN OCH CONFIG
 st.set_page_config(page_title="Aleos Spel-AI Factory", page_icon="🎮", layout="centered")
 st.title("🕹️ Aleos Spel-AI & Visuella Studio")
-st.write("Skriv vad du vill bygga eller ladda upp instruktioner, så genereras de kompakta spelmotorerna live här på skärmen!")
+st.write("Skriv din spelidé, klicka på knappen för att generera och lås fast spelskärmen!")
 
-# Initiera chattminne och spelstatus
+# Initiera chattminne och fastlåst spelstatus
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "valt_spel" not in st.session_state:
     st.session_state.valt_spel = None
 
-# Knappar för städning högst upp
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("🆕 Starta helt nytt spel", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.valt_spel = None
-        st.success("Spelstudion återställd!")
-        time.sleep(0.4)
-        st.rerun()
-with col2:
-    if st.button("🧹 Töm chatten", use_container_width=True):
-        st.session_state.messages = []
-        st.success("Chatten rensad!")
-        time.sleep(0.4)
-        st.rerun()
+# NYÅTERSTÄLLNING: Denna raderar allt och låser upp spelväljaren
+if st.button("🔴 🆕 Nollställ & Starta helt nytt spel", use_container_width=True):
+    st.session_state.messages = []
+    st.session_state.valt_spel = None
+    st.success("Spelstudion har nollställts helt och hållet!")
+    time.sleep(0.6)
+    st.rerun()
 
-# --- 2. KÖR DE VISUELLA SPELMOTORERNA HÄR (Om ett spel är aktivt) ---
+st.write("---")
+
+# --- 2. HÄR VISAS DET GENERERADE SPELET OCH LÅSER SIG KVAR ---
 if st.session_state.valt_spel == "snake":
-    st.subheader("🐍 Visuell Spelmotor: Retro Snake")
+    st.subheader("🐍 Fastlåst Spelmotor: Retro Snake")
+    st.caption("Spelet är låst på skärmen. Klicka på spelytan och styr med pilarna eller W,A,S,D!")
     snake_html = """
     <canvas id="snakeCanvas" width="400" height="300" style="background: #0a1c0a; display: block; margin: 0 auto; border: 3px solid #00ff00;"></canvas>
     <script>
@@ -63,7 +58,8 @@ if st.session_state.valt_spel == "snake":
     components.html(snake_html, height=330)
 
 elif st.session_state.valt_spel == "dungeon":
-    st.subheader("👾 Visuell Spelmotor: Dungeon Crawler")
+    st.subheader("👾 Fastlåst Spelmotor: Dungeon Crawler")
+    st.caption("Spelet är låst på skärmen. Styr hjälten (@) till skatterna (💰)!")
     dungeon_html = """
     <canvas id="gameCanvas" width="400" height="300" style="background: #1a0f00; display: block; margin: 0 auto; border: 3px solid #ffaa00;"></canvas>
     <script>
@@ -88,7 +84,8 @@ elif st.session_state.valt_spel == "dungeon":
     components.html(dungeon_html, height=330)
 
 elif st.session_state.valt_spel == "bil":
-    st.subheader("🏎‍🟀 Visuell Spelmotor: Neon Racer")
+    st.subheader("🏎‍🟀 Fastlåst Spelmotor: Neon Racer")
+    st.caption("Spelet är låst på skärmen. Håll inne UPPÅTPIL eller W för att köra!")
     bil_html = """
     <canvas id="gameCanvas" width="400" height="300" style="background: #111; display: block; margin: 0 auto; border: 3px solid #ff0055;"></canvas>
     <script>
@@ -111,41 +108,52 @@ elif st.session_state.valt_spel == "bil":
     </script>
     """
     components.html(bil_html, height=330)
+else:
+    st.info("🤖 Ingen aktiv spelmotor. Fyll i rutorna nedan och klicka på 'Generera Spel' för att starta!")
 
 st.write("---")
 
-# --- 3. DESSA TEXTRUTOR LIGGER NU HELT FRISTÅENDE OCH FÖRSVINNER ALDRIG ---
+# --- 3. KONTROLLER OCH CHATT ---
 st.write("### 📸 Visuell insamling och analys:")
 bild_instruktion = st.text_input("Beskriv din visuella scanning eller spelskärm här:")
 
-# Visa tidigare konversation
+# Visa chattmeddelanden
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# CHATT-INPUT (Ligger alltid kvar längst ner på skärmen!)
-if prompt := st.chat_input("Vilket spel eller vilken mekanik vill du generera nu?"):
+# Vi skapar en snygg inmatningsrad med Textfält + Generera-knapp sida vid sida
+chatt_spår, knapp_spår = st.columns([4, 1])
+
+with chatt_spår:
+    input_text = st.text_input("Fyll i din spelidé eller prata med AI:n här:", key="user_input_field")
+
+with knapp_spår:
+    st.write(" ") # Justering
+    generera_klick = st.button("🤖 Generera Spel", use_container_width=True)
+
+# PROCESSOR: Körs när du klickar på den nya genereraknappen eller trycker enter
+if generera_klick and input_text:
+    final_prompt = input_text
     if bild_instruktion:
-        prompt = f"[Visuell observation: {bild_instruktion}] " + prompt
+        final_prompt = f"[Visuell scanning: {bild_instruktion}] " + final_prompt
         
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "user", "content": final_prompt})
+    
+    text_analys = input_text.lower()
+    
+    # Här scannar vi orden och sätter fast rätt spel i minnet!
+    if "snake" in text_analys or "orm" in text_analys or "grön" in text_analys:
+        st.session_state.valt_spel = "snake"
+        svar = "🐍 *Spel genererat och låst: Retro Snake!* Spelskärmen har fixerats högst upp och kommer stanna kvar tills du nollställer."
+    elif "skat" in text_analys or "dungeon" in text_analys or "crawler" in text_analys or "boss" in text_analys:
+        st.session_state.valt_spel = "dungeon"
+        svar = "👾 *Spel genererat och låst: Dungeon Crawler!* Grottan har fixerats högst upp och kommer stanna kvar tills du nollställer."
+    elif "bil" in text_analys or "race" in text_analys or "kör" in text_analys:
+        st.session_state.valt_spel = "bil"
+        svar = "🏎‍🟀 *Spel genererat och låst: Neon Racer!* Banan har fixerats högst upp och kommer stanna kvar tills du nollställer."
+    else:
+        svar = f"Registrerat! Om du vill låsa fast en visuell skärm, se till att skriva *'snake', *'dungeon'* eller *'bilspel'** på raden och klicka på knappen!"
 
-    with st.chat_message("assistant"):
-        text_input = prompt.lower()
-        
-        if "snake" in text_input or "orm" in text_input or "grön" in text_input:
-            st.session_state.valt_spel = "snake"
-            rent_svar = "🐍 *Retro Snake aktiverat!* Spelsidan har uppdaterats högst upp. Klicka på spelskärmen och styr ormen!"
-        elif "skat" in text_input or "dungeon" in text_input or "crawler" in text_input:
-            st.session_state.valt_spel = "dungeon"
-            rent_svar = "👾 *Dungeon Crawler aktiverat!* Grottbakgrunden har ritats upp ovanför. Styr @ och samla guld!"
-        elif "bil" in text_input or "race" in text_input or "kör" in text_input:
-            st.session_state.valt_spel = "bil"
-            rent_svar = "🏎‍🟀 *Neon Racer aktiverat!* Racingbanan ligger laddad högst upp. Håll inne W eller UPPÅTPIL för att gasa!"
-        else:
-            rent_svar = f"Registrerat! Skriv *'snake', *'dungeon'* eller *'bilspel'** i rutan nedan så ritar jag upp rätt grafik direkt ovanför chatten!"
-
-        st.markdown(rent_svar)
-        st.session_state.messages.append({"role": "assistant", "content": rent_svar})
+    st.session_state.messages.append({"role": "assistant", "content": svar})
+    st.rerun()
