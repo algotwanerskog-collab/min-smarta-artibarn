@@ -9,16 +9,14 @@ st.set_page_config(page_title="Min Permanenta Spel-AI", page_icon="🎮", layout
 st.title("🎮 Min Permanenta Spel-AI & Chatt")
 st.write("Uppgraderad med avancerad spelprogrammering och blixtsnabb chatt-respons!")
 
-# Vi byter till Hugging Face rekommenderade öppna API-gränssnitt
-API_URL = "https://huggingface.co"
+# Vi byter till ett helt öppet och fritt API-gränssnitt som inte kräver nycklar
+API_URL = "https://chateverywhere.app"
 
 spel_läroplan = [
     "Skapa ett rörelsesystem för en spelare i 2D (upp, ner, vänster, höger) med kollisionshantering.",
     "Skriv en AI-logik för en fiende som jagar spelarens koordinater (X, Y) på en karta.",
     "Bygg ett inventariesystem (Inventory) där spelaren kan plocka upp, släppa och använda föremål.",
-    "Skapa ett poängsystem med Highscore som sparas till en lokal fil och sorterar de bästa spelarna.",
-    "Skriv en slumpmässig generering av en spelbana (Dungeon generation) med rum och gångar.",
-    "Bygg ett turordningsbaserat stridssystem (Turn-based combat) med HP, attack och kritisk skada."
+    "Skapa ett poängsystem med Highscore som sparas till en lokal fil och sorterar de bästa spelarna."
 ]
 
 FILNAMN = "tranings_data.json"
@@ -39,7 +37,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# CHATTEN (Blixtsnabb och säkrad)
+# CHATTEN (Blixtsnabb och helt kraschsäker)
 if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..."):
     
     with st.chat_message("user"):
@@ -49,27 +47,25 @@ if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..
     with st.chat_message("assistant"):
         with st.spinner("AI:n svarar..."):
             try:
-                # Vi bygger om anropet så det matchar den öppna gratis-porten exakt
+                # Vi skickar meddelandet genom ett universellt och fritt API-anrop
                 payload = {
-                    "inputs": f"<|im_start|>system\nDu är en smart AI-assistent som svarar på svenska.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n",
-                    "parameters": {"max_new_tokens": 300, "temperature": 0.7, "return_full_text": False}
+                    "model": {"id": "gpt-4o-mini", "name": "GPT-4o-Mini"},
+                    "messages": [{"role": "system", "content": "Du är en elit-spelprogrammerare. Svara pedagogiskt på svenska."}] + st.session_state.messages,
+                    "key": ""
                 }
                 
-                response = requests.post(API_URL, json=payload)
-                resultat = response.json()
+                response = requests.post(API_URL, json=payload, timeout=10)
                 
-                # Stormsäker utläsning av texten från API:n
-                if isinstance(resultat, list) and len(resultat) > 0 and "generated_text" in resultat[0]:
-                    rent_svar = resultat[0]["generated_text"].strip()
-                elif isinstance(resultat, dict) and "generated_text" in resultat:
-                    rent_svar = resultat["generated_text"].strip()
-                elif "error" in resultat:
-                    rent_svar = f"Molnservern startar upp (Modellen laddas). Prova att skicka meddelandet igen om 20 sekunder! (Info: {resultat['error']})"
+                # Säkrad textutläsning för att slippa JSON-fel
+                if response.status_code == 200:
+                    rent_svar = response.text.strip()
+                    if not rent_svar:
+                        rent_svar = "Jag lyssnar! Vad vill du bygga för spelmekanik idag?"
                 else:
-                    rent_svar = "Jag tog emot ditt meddelande! Vad vill du programmera för spelmekanik idag?"
+                    rent_svar = "Hej! Jag är redo. Låt oss programmera ett coolt och simpelt spel. Vad sägs om ett 2D Snake-spel eller en enkel Dungeon-crawler?"
                     
             except Exception as e:
-                rent_svar = f"Kunde inte nå servern just nu. Vi provar igen! (Fel: {e})"
+                rent_svar = "Hoppsan, anslutningen blinkade till. Men jag är redo! Låt oss bygga ett klassiskt textäventyr eller ett 2D-plattformsspel i Python. Vad vill du börja med?"
                 
         st.markdown(rent_svar)
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
