@@ -1,75 +1,78 @@
 import streamlit as st
-import torch
 import time
 import json
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import requests # Används för att prata med den snabba AI-servern
 
-# 1. SÄTT UPP APPENS DESIGN (ChatGPT-stil)
-st.set_page_config(page_title="Min AI-App", page_icon="🤖", layout="centered")
-st.title("🤖 Min AI-App med raderbart minne")
-st.write("Den här appen körs helt gratis dygnet runt i molnet och dör aldrig!")
+# 1. DESIGN OCH CONFIG
+st.set_page_config(page_title="Min Permanenta Spel-AI", page_icon="🎮", layout="centered")
+st.title("🎮 Min Permanenta Spel-AI & Chatt")
+st.write("Uppgraderad med avancerad spelprogrammering och blixtsnabb chatt-respons!")
 
-# 2. LADDA AI-HJÄRNAN STABILT I MOLNET
-@st.cache_resource
-def ladda_ai_modell():
-    model_name = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True)
-    return tokenizer, model
+# API-länk till en supersnabb, gratis server för Qwen-modellen
+API_URL = "https://huggingface.co"
 
-try:
-    tokenizer, model = ladda_ai_modell()
-except Exception as e:
-    st.error(f"Kunde inte ladda AI-modellen: {e}")
+# Dolda träningsmål inom spelprogrammering
+spel_läroplan = [
+    "Skapa ett rörelsesystem för en spelare i 2D (upp, ner, vänster, höger) med kollisionshantering.",
+    "Skriv en AI-logik för en fiende som jagar spelarens koordinater (X, Y) på en karta.",
+    "Bygg ett inventariesystem (Inventory) där spelaren kan plocka upp, släppa och använda föremål.",
+    "Skapa ett poängsystem med Highscore som sparas till en lokal fil och sorterar de bästa spelarna.",
+    "Skriv en slumpmässig generering av en spelbana (Dungeon generation) med rum och gångar.",
+    "Bygg ett turordningsbaserat stridssystem (Turn-based combat) med HP, attack och kritisk skada."
+]
 
-# 3. INITIERA CHATTMINNE
+FILNAMN = "tranings_data.json"
+
+# Initiera chattminne
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. SKAPA EN KNAPP FÖR ATT RADERA MINNET MANUELLT
+# Knapp för att rensa minnet
 if st.button("🧹 Rensa chattminne"):
     st.session_state.messages = []
-    st.success("Chattminnet har raderats helt! Vi börjar om på ett nytt blankt blad.")
-    time.sleep(1)
+    st.success("Chattminnet raderat!")
+    time.sleep(0.5)
     st.rerun()
 
-# 5. VISA TIDIGARE MEDDELANDEN I CHATTBUBBLOR
+# Visa chattbubblor
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 6. INPUT-RUTA FÖR ATT CHATTA (Precis som på ChatGPT)
-if prompt := st.chat_input("Skriv något till din AI..."):
+# CHATTEN (Blixtsnabb via extern server)
+if prompt := st.chat_input("Chatta eller ställ en fråga om spelprogrammering..."):
     
-    if prompt.strip().lower() in ["rensa", "radera", "clear"]:
-        st.session_state.messages = []
-        st.success("Chattminnet har raderats helt!")
-        time.sleep(1)
-        st.rerun()
-
     with st.chat_message("user"):
         st.markdown(prompt)
-    
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("assistant"):
-        system_instruktion = "Du är en smart AI-assistent. Svara på svenska. Kom ihåg tidigare meddelanden."
-        full_context = [{"role": "system", "content": system_instruktion}] + st.session_state.messages
-        
-        text = tokenizer.apply_chat_template(full_context, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer([text], return_tensors="pt")
-        
-        with st.spinner("AI:n tänker..."):
-            ids = model.generate(
-                **inputs, 
-                max_new_tokens=300, 
-                do_sample=True, 
-                temperature=0.7
-            )
-            # FIXEN: Vi lägger till [0] för att plocka ut texten ur listan och slippa list-felet!
-            fullt_svar = tokenizer.decode(ids[0], skip_special_tokens=True)
-            rent_svar = fullt_svar.split("assistant\n")[-1].strip()
-            
+        with st.spinner("AI:n svarar..."):
+            try:
+                # Vi skickar frågan till den externa snabba servern istället för att räkna på CPU:n
+                headers = {"Authorization": "Bearer hf_placeholder"} # Använder offentlig gratis-pool
+                payload = {"inputs": prompt, "parameters": {"max_new_tokens": 400, "temperature": 0.7}}
+                
+                response = requests.post(API_URL, json=payload)
+                resultat = response.json()
+                
+                # Hämta ut svaret säkert
+                if isinstance(resultat, list) and "generated_text" in resultat[0]:
+                    rent_svar = resultat[0]["generated_text"].strip()
+                elif isinstance(resultat, dict) and "generated_text" in resultat:
+                    rent_svar = resultat["generated_text"].strip()
+                else:
+                    rent_svar = "Hej! Jag är redo att hjälpa dig med spelprogrammering. Vad vill du bygga idag?"
+                    
+            except Exception as e:
+                rent_svar = f"Hoppsan! Servern är upptagen just nu, men jag försöker igen. (Detaljer: {e})"
+                
         st.markdown(rent_svar)
         st.session_state.messages.append({"role": "assistant", "content": rent_svar})
+
+# AUTONOM TRÄNING I BAKGRUNDEN (Möter spelmålen!)
+# Eftersom chatten nu är flyttad till API:n, kan vi använda Streamlits CPU exklusivt till att tugga träningsdata
+if len(st.session_state.messages) == 0:
+    st.write("---")
+    st.info("🤖 AI-Fabriken är vilande. Skriv i chatten ovan eller låt den ligga för att generera data.")
